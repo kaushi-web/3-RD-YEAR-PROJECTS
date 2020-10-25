@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<style>
+form {
+    margin: auto;
+    width: 35%;
+}
+.result {
+    margin: auto;
+    width: 35%;
+    border: 1px solid #ccc;
+}
+</style>
+<head>
+    <title>Heart Disease Prediction Model</title>
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
+
+<form action="{{ url_for('main') }}" method="POST">
+    <fieldset>
+        <legend>Input values:</legend>
+        Age:
+        <input name="age" type="number" step="any" required>
+        <br>
+        <br> Systolic Blood Pressure:
+        <input name="sysBP" type="number" step="any" required>
+        <br>
+        <br> Diastolic Blood Pressure:
+        <input name="diaBP" type="number" step="any" required>
+        <br>
+        <br> Glucose:
+        <input name="glucose" type="number" step="any" required>
+        <br>
+        <br> Diabetes:
+        <input name="diabetes" type="number" step="any" required>
+        <br>
+        <br> Gender:
+        <input name="male" type="number" step="any" required>
+        <br>
+        <br> Blood pressure medications:
+        <input name="BPMeds" type="number" step="any" required>
+        <br>
+        <br> Total Cholesterol:
+        <input name="totChol" type="number" step="any" required>
+        <br>
+        <br> Body Mass Index(BMI):
+        <input name="BMI" type="number" step="any" required>
+        <br>
+        <br> Prevalent Stroke:
+        <input name="prevalentStroke" type="number" step="any" required>
+        <br>
+        <br> Prevalent Hypertension:
+        <input name="prevalentHyp" type="number" step="any" required>
+        <br>
+
+        <br>
+        <input type="submit">
+    </fieldset>
+</form>
+<br>
+<div class="result" align="center">
+    {% if result %}
+        {% for variable, value in original_input.items() %}
+            <b>{{ variable }}</b> : {{ value }}
+        {% endfor %}
+        <br>
+        <br> Predicted result for Coronary Heart Diseases in next 10 years:
+           <p style="font-size:50px">
+           {% if result==1 %}Positive{% endif %}
+               {% if result==0 %}Negative{% endif %}
+
+           </p>
+    {% endif %}
+</div>
+</html>
