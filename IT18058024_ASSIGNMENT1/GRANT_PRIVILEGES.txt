@@ -1,0 +1,35 @@
+
+
+login as sysdba
+
+1)alter session set "_ORACLE_SCRIPT"=true;
+
+2).create user kaushi identified by 1234;
+
+3).grant create session to kaushi;
+
+login as kaushi
+
+4).connect kaushi/1234 (without closing sqlplus)
+
+log again as sysdba
+
+5).grant create table to kaushi;
+
+6).grant create type to kaushi;
+
+7) . GRANT ALL PRIVILEGES TO kaushi;
+
+
+CREATE OR REPLACE DIRECTORY MY_DIR AS 'C:\dsda\';
+
+GRANT READ, WRITE ON DIRECTORY MY_DIR TO kaushi;
+
+GRANT EXECUTE ON SYS.UTL_FILE TO kaushi;
+
+revoke execute on UTL_FILE from PUBLIC;
+
+
+
+
+

@@ -1,0 +1,257 @@
+______TABLE TYPES_________
+create type patient_t as object(
+	cid ref location_t,
+	day DATE,
+	number_confirmed number(6),
+	number_deths number(6),
+	number_recoved number(6)
+)
+
+
+
+create type location_t as object(
+	lid number(4),
+	name varchar2(50),
+	province varchar2(50),
+	lat number(8,4),
+	longtiude number(8,4)
+)
+
+______TABLES_________________
+ create table location of location_t (
+	constraint tbl_primarykey primary key(lid),
+	constraint tble_long longtiude not null,
+	constraint tble_lat lat not null,
+	constraint tble_country name not null
+)
+/
+
+
+create table covidPtients of patient_t(
+constraint tbl_fk foreign key (cid) references location)
+/
+
+
+
+
+
+___________AUTOINCREAMENT__________
+CREATE SEQUENCE test_sequence
+START WITH 1
+INCREMENT BY 1;
+
+CREATE OR REPLACE TRIGGER locationId_trigger
+BEFORE INSERT
+ON location
+REFERENCING NEW AS NEW
+FOR EACH ROW
+BEGIN
+SELECT test_sequence.nextval INTO :NEW.lid FROM dual;
+END;
+/
+
+
+
+
+****
+______________________________________________________________
+Methord to insert other data to records table
+--------------------------------------------------------------
+DECLARE
+      F1 UTL_FILE.FILE_TYPE;
+      F2 UTL_FILE.FILE_TYPE;
+      F3 UTL_FILE.FILE_TYPE;
+      WF UTL_FILE.FILE_TYPE;
+      V_LINE_C VARCHAR2 (2000);
+      V_LINE_D VARCHAR2 (2000);
+      V_LINE_R VARCHAR2 (2000);
+      V_LINE2 VARCHAR2 (2000);
+      V_date VARCHAR2(50);
+      V_Confirmed NUMBER(7);
+      V_Deaths NUMBER(7);
+      V_Recoverd NUMBER(7);
+     
+	i number(5);
+	row number(5);
+    BEGIN
+	
+      F1 := UTL_FILE.FOPEN ('MY_DIR', 'C:\dsda\time_series_19-covid-Confirmed.CSV', 'R');
+      F2 := UTL_FILE.FOPEN ('MY_DIR', 'C:\dsda\time_series_19-covid-Deaths.CSV', 'R');
+      F3 := UTL_FILE.FOPEN ('MY_DIR', 'C:\dsda\time_series_19-covid-Recovered.CSV', 'R');
+
+     
+	i:=0;
+	row:=0;
+
+	
+    IF UTL_FILE.IS_OPEN(F1) AND UTL_FILE.IS_OPEN(F2) AND UTL_FILE.IS_OPEN(F3) THEN
+      LOOP
+        BEGIN
+	  i:=i+1;
+	  UTL_FILE.GET_LINE(F1, V_LINE_C, 2000);
+	  UTL_FILE.GET_LINE(F2, V_LINE_D, 2000);
+	  UTL_FILE.GET_LINE(F3, V_LINE_R, 2000);
+	  IF i =1 THEN
+		CONTINUE;
+	  END IF;
+	  
+          IF V_LINE_C IS NULL THEN		
+		
+            EXIT;
+          END IF;
+	  i :=5;
+		
+		row :=row+1;
+      	    WF := UTL_FILE.FOPEN ('MY_DIR', 'C:\dsda\dates.CSV', 'R');
+	    IF UTL_FILE.IS_OPEN(WF) THEN
+		
+		
+		LOOP
+			BEGIN
+		        UTL_FILE.GET_LINE(WF, V_LINE2, 100);
+			IF V_LINE2 IS NULL THEN
+				UTL_FILE.FCLOSE(WF);
+				EXIT;
+			  END IF;
+	 		  V_date := REGEXP_SUBSTR(V_LINE2, '("([^"]*)")|[^,]+', 1, 1);
+			  V_Confirmed := REGEXP_SUBSTR(V_LINE_C, '("([^"]*)")|[^,]+', 1, i);
+			  V_Deaths := REGEXP_SUBSTR(V_LINE_D, '("([^"]*)")|[^,]+', 1, i);
+			  V_Recoverd := REGEXP_SUBSTR(V_LINE_R, '("([^"]*)")|[^,]+', 1, i);
+			 			  
+       			  INSERT INTO covidPtients  values( (select ref(t) from location t where t.lid=row),V_date , V_Confirmed,V_Deaths ,V_Recoverd ); 
+			  COMMIT;
+			  i:=i+1;
+			  
+		
+		END;	
+		END LOOP;
+
+	     END IF;
+	 
+
+	EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+          EXIT;
+        END;
+      END LOOP;
+    END IF;
+	IF UTL_FILE.is_open(WF) THEN
+	UTL_FILE.fclose(WF);
+  	END IF;
+
+    
+    UTL_FILE.FCLOSE(F1);
+    UTL_FILE.FCLOSE(F2);
+    UTL_FILE.FCLOSE(F3);
+  END;
+/
+
+
+
+ALTER SESSION SET NLS_DATE_FORMAT = 'MM/DD/YYYY';
+SELECT TO_DATE('05/22/2015') FROM dual;
+
+GRANT EXECUTE on utl_file TO kaushi;
+
+-----statements to load data---
+select * from location;
+select * from  covidPtients;
+
+
+-----member functions--
+ALTER TYPE patient_t
+     ADD MEMBER FUNCTION numberOfhospitalizedPatiens
+     RETURN NUMBER CASCADE;
+ 
+ALTER TYPE patient_t ADD MEMBER FUNCTION 
+deathRate
+RETURN NUMBER CASCADE;
+
+ALTER TYPE patient_t ADD MEMBER FUNCTION 
+recoverRate
+RETURN NUMBER CASCADE;
+
+
+CREATE OR REPLACE TYPE BODY patient_t
+AS MEMBER FUNCTION 
+numberOfhospitalizedPatiens 
+RETURN NUMBER IS 
+	BEGIN 
+		 RETURN SELF.number_confirmed -SELF.number_deths-SELF.number_recoved;
+	END numberOfhospitalizedPatiens; 
+	
+	MEMBER FUNCTION deathRate
+	RETURN NUMBER IS
+	BEGIN
+	
+	RETURN (self.number_deths/self.number_confirmed)*100; 		
+	
+	END deathRate;
+
+	MEMBER FUNCTION recoverRate
+        RETURN NUMBER IS
+
+	BEGIN
+	
+	RETURN (self.number_recoved/self.number_confirmed)*100; 		
+	
+	END recoverRate;
+
+
+END;
+
+
+
+--------in case want to drop tables--------
+
+---drop table---
+drop table covidPtients
+/
+drop table location
+/
+
+---drop type--
+drop type patient_t
+/
+drop type location_t
+/
+
+-------drop sequence----
+drop sequence test_sequence
+/
+
+
+--------report sql queries-------------
+
+___view hospitalized patient count____
+
+select c.day,c.numberOfhospitalizedPatiens()
+from covidPtients c
+/
+
+__total deathcount in countries per day_____
+select distinct c.cid.name,c.day,sum(c.number_deths)
+from covidPtients c
+group by c.cid.name,c.day
+/
+
+__total confirm count in a day per country_____
+select distinct c.cid.name,c.day,sum(c.number_confirmed)
+from covidPtients c
+group by c.cid.name,c.day
+/
+
+__total released count in a day per country_____
+select distinct c.cid.name,c.day,sum(c.number_recoved)
+from covidPtients c
+group by c.cid.name,c.day
+/
+
+_____total death count>100_____
+select distinct c.cid.name,sum(c.number_deths)
+from covidPtients c
+group by c.cid.name
+having sum(c.number_deths)>100
+/
+
+
